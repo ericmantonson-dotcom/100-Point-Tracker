@@ -67,6 +67,39 @@ const PointTracker = () => {
   const weekPoints = weekActivities.reduce((sum, a) => sum + a.points, 0);
   const weekPercent = Math.min((weekPoints / 100) * 100, 100);
 
+  // Calculate all past weeks
+  const getAllWeeks = () => {
+    const weeks = {};
+    activities.forEach((activity) => {
+      const actDate = new Date(activity.date);
+      const day = actDate.getDay();
+      const diff = actDate.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(actDate.setDate(diff));
+      const weekKey = monday.toISOString().split('T')[0];
+
+      if (!weeks[weekKey]) {
+        const sundayDate = new Date(monday);
+        sundayDate.setDate(sundayDate.getDate() + 6);
+        const sundayStr = sundayDate.toISOString().split('T')[0];
+        weeks[weekKey] = {
+          start: weekKey,
+          end: sundayStr,
+          points: 0,
+          count: 0,
+        };
+      }
+      weeks[weekKey].points += activity.points;
+      weeks[weekKey].count += 1;
+    });
+
+    return Object.values(weeks).sort(
+      (a, b) => new Date(b.start) - new Date(a.start),
+    );
+  };
+
+  const allWeeks = getAllWeeks();
+  const pastWeeks = allWeeks.filter((w) => w.start < weekStart);
+
   const addActivity = (type) => {
     const newActivity = {
       id: Date.now(),
@@ -172,6 +205,32 @@ const PointTracker = () => {
           <div className="stat-target">goal: 100</div>
         </div>
       </div>
+
+      {/* History */}
+      {pastWeeks.length > 0 && (
+        <div className="history-section">
+          <h3>Week history</h3>
+          <div className="history-list">
+            {pastWeeks.map((week) => (
+              <div key={week.start} className="history-item">
+                <div className="history-info">
+                  <div className="history-dates">
+                    {week.start} to {week.end}
+                  </div>
+                  <div className="history-activities">
+                    {week.count} activit{week.count === 1 ? 'y' : 'ies'}
+                  </div>
+                </div>
+                <div
+                  className={`history-points ${week.points >= 100 ? 'achieved' : 'incomplete'}`}
+                >
+                  {week.points} pts
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Info */}
       <div className="info-box">
